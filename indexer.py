@@ -4,18 +4,48 @@ import time
 import datetime
 from operator import itemgetter
 
+import scipy
+from scipy.spatial import distance
+import numpy as np
+import matplotlib.pyplot as plt
+
 files = ["GOOGL.csv", "YHOO2.csv", "ORCL2.csv", "MSFT2.csv"]
 dataArray = []
 largest_y = 0
 smallest_y = 0
 setToggle = 1
+fileName = 'corepoint_'
+globalVar = 0
+allCorePoints = []
 
-def dbscan_thread(tempSet):
-	print("yoo")
-	# eNeighbourhood = 86400
-	# minPts = 8
-	# for j in tempSet:
-	# 		if tempSet[j][3] == '':
+# DBSCAN constants
+radiusDistance = 100000
+minPoints = 10
+
+def dbscan(tempSet):
+	#print(set)
+	individualSet = []
+	allPoints = []
+	dataValue = tempSet
+	for i in dataValue:
+		for j in i:
+			coordinates = (j[0], j[2])
+			#print(coordinates)
+			individualSet.append(coordinates)
+			allPoints.append(j)
+
+	dist = scipy.spatial.distance.cdist(individualSet,individualSet,'euclidean')
+	for d in range(0, len(dist)):
+		borderPoint = 0
+		borderPoints = []
+		for h in range(0, len(dist[d])):
+			if dist[d][h] < radiusDistance:
+				print(dist[d][h])
+				borderPoint += 1
+				borderPoints.append(allPoints[h])
+		if borderPoint >= minPoints:
+			print("core point!")
+			allCorePoints.append(borderPoints)
 
 def findRanges(change):
 	global largest_y
@@ -44,10 +74,6 @@ for f in files:
 			obj = [time2, company, change, '', pairIndex]
 			dataArray.append(obj)
 		toggle += 1
-#print(dataArray)
-
-# k-means start 
-#entroids = [[1375372800,smallest_y+8.02],[1438444800,largest_y-13.02],[1122912000,smallest_y+45.02],[1217606400,smallest_y+10.90]]
 
 # Density based clustering start
 distPairs = {}
@@ -55,15 +81,9 @@ dataArray = sorted(dataArray, key=itemgetter(0))
 
 toggle = 0
 tempSet = []
+dailyData = []
 dateToggle = 0
 for i in dataArray:
-	if dateToggle == 6:
-		tempSet.pop()
-		# DBSCAN processing
-		#while dbscanThread.isAlive() == false:
-		print(tempSet)
-		dbscanThread = threading.Thread(target=dbscan_thread, args=tempSet)
-		dbscanThread.start()		
 	if toggle == 0:
 		#print(i)
 		firstTerm = i[0]
@@ -74,7 +94,22 @@ for i in dataArray:
 		if i[0] == firstTerm:
 			tempSet.append(i)
 		else:
+			dailyData.append(tempSet)
+			tempSet = []
 			firstTerm = i[0]
 			tempSet.append(i)
 			toggle = 1
 			dateToggle += 1
+
+packet = 1
+weeklySet = []
+for j in range(0, len(dailyData)):
+	if j%5 == 0 and j != 0:
+		dbscan(weeklySet)
+		weeklySet = []
+		weeklySet.append(dailyData[j])
+	else:
+		weeklySet.append(dailyData[j])
+
+#print((allCorePoints))
+print(len(allCorePoints))
